@@ -10,94 +10,239 @@ async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
         # Users table
         await db.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tel_id INTEGER UNIQUE NOT NULL,           -- آیدی تلگرام (user_id)
-                name TEXT,                                -- نام کاربر در تلگرام
-                capacity INTEGER DEFAULT 10,               -- محدودیت وزن معامله شده در روز
-                status INTEGER DEFAULT 0,                 -- 0=pending, 1=approved, 2=rejected, 3=banned, 4 emergency exit
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+                         CREATE TABLE IF NOT EXISTS users
+                         (
+                             id
+                             INTEGER
+                             PRIMARY
+                             KEY
+                             AUTOINCREMENT,
+                             tel_id
+                             INTEGER
+                             UNIQUE
+                             NOT
+                             NULL, -- آیدی تلگرام (user_id)
+                             name
+                             TEXT, -- نام کاربر در تلگرام
+                             capacity
+                             INTEGER
+                             DEFAULT
+                             10,   -- محدودیت وزن معامله شده در روز
+                             status
+                             INTEGER
+                             DEFAULT
+                             0,    -- 0=pending, 1=approved, 2=rejected, 3=banned, 4 emergency exit
+                             created_at
+                             TEXT
+                             DEFAULT
+                             CURRENT_TIMESTAMP
+                         )
+                         """)
 
         # Roles and permissions table
         await db.execute("""
-            CREATE TABLE IF NOT EXISTS roles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                permission INTEGER NOT NULL,              -- 0= set order, 1= accept order,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-            )
-        """)
+                         CREATE TABLE IF NOT EXISTS roles
+                         (
+                             id
+                             INTEGER
+                             PRIMARY
+                             KEY
+                             AUTOINCREMENT,
+                             user_id
+                             INTEGER
+                             NOT
+                             NULL,
+                             permission
+                             INTEGER
+                             NOT
+                             NULL, -- 0= set order, 1= accept order,
+                             created_at
+                             TEXT
+                             DEFAULT
+                             CURRENT_TIMESTAMP,
+                             FOREIGN
+                             KEY
+                         (
+                             user_id
+                         ) REFERENCES users
+                         (
+                             id
+                         ) ON DELETE CASCADE
+                             )
+                         """)
 
         # Orders / Offers table
         await db.execute("""
-            CREATE TABLE IF NOT EXISTS orders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                
-                -- اطلاعات لفظ دهنده
-                offerer_id INTEGER NOT NULL,           -- آیدی کاربر لفظ دهنده (از جدول users)
-                offerer_tel_id INTEGER NOT NULL,       -- tel_id برای راحتی
-                
-                -- وضعیت و زمان‌ها
-                created_at INTEGER,                         -- زمان ثبت لفظ
-                expires_at INTEGER,                         -- زمان انقضا (۶۰ ثانیه بعد)
-                trade_date TEXT NOT NULL,                    -- تاریخ معامله (جلالی)
-                
-                -- جزئیات معامله
-                price INTEGER NOT NULL,                      -- قیمت
-                order_type TEXT NOT NULL,                    -- خرید - فروش
-                total_volume INTEGER NOT NULL,                  -- حجم به کیلو
-                remaining_volume INTEGER NOT NULL,                           -- حجم به کیلو
-                payment_type TEXT NOT NULL,                  --  1 نقدی 2 - غیر نقدی
-                date_type TEXT NOT NULL,                    -- 2 روز 1 - اولین روز کاری بعد
-                
-                -- توضیحات اضافی (اختیاری)
-                description TEXT,                            -- متن بعد از ":"
-                -- متن پیام
-                group_text TEXT,                            -- متن ارسال شده ر گروه
-                
-                -- وضعیت معامله
-                status TEXT DEFAULT 'active',                -- active / fully_accepted / cancelled / expired
-                
-                -- پیام در گروه (برای مدیریت دکمه‌ها)
-                group_message_id INTEGER,                    -- message_id در گروه
-                group_chat_id INTEGER,                       -- chat_id گروه
-                
-                FOREIGN KEY (offerer_id) REFERENCES users(id)
-            );
-        """)
+                         CREATE TABLE IF NOT EXISTS orders
+                         (
+                             id
+                             INTEGER
+                             PRIMARY
+                             KEY
+                             AUTOINCREMENT,
+
+                             -- اطلاعات لفظ دهنده
+                             offerer_id
+                             INTEGER
+                             NOT
+                             NULL,     -- آیدی کاربر لفظ دهنده (از جدول users)
+                             offerer_tel_id
+                             INTEGER
+                             NOT
+                             NULL,     -- tel_id برای راحتی
+
+                             -- وضعیت و زمان‌ها
+                             created_at
+                             INTEGER,  -- زمان ثبت لفظ
+                             expires_at
+                             INTEGER,  -- زمان انقضا (۶۰ ثانیه بعد)
+                             trade_date
+                             TEXT
+                             NOT
+                             NULL,     -- تاریخ معامله (جلالی)
+
+                             -- جزئیات معامله
+                             price
+                             INTEGER
+                             NOT
+                             NULL,     -- قیمت
+                             order_type
+                             TEXT
+                             NOT
+                             NULL,     -- خرید - فروش
+                             total_volume
+                             INTEGER
+                             NOT
+                             NULL,     -- حجم به کیلو
+                             remaining_volume
+                             INTEGER
+                             NOT
+                             NULL,     -- حجم به کیلو
+                             payment_type
+                             TEXT
+                             NOT
+                             NULL,     --  1 نقدی 2 - غیر نقدی
+                             date_type
+                             TEXT
+                             NOT
+                             NULL,     -- 2 روز 1 - اولین روز کاری بعد
+
+                             -- توضیحات اضافی (اختیاری)
+                             description
+                             TEXT,     -- متن بعد از ":"
+                             -- متن پیام
+                             group_text
+                             TEXT,     -- متن ارسال شده ر گروه
+
+                             -- وضعیت معامله
+                             status
+                             TEXT
+                             DEFAULT
+                             'active', -- active / fully_accepted / cancelled / expired
+
+                             -- پیام در گروه (برای مدیریت دکمه‌ها)
+                             group_message_id
+                             INTEGER,  -- message_id در گروه
+                             group_chat_id
+                             INTEGER,  -- chat_id گروه
+
+                             FOREIGN
+                             KEY
+                         (
+                             offerer_id
+                         ) REFERENCES users
+                         (
+                             id
+                         )
+                             );
+                         """)
 
         # Order acceptances
         await db.execute("""
-            CREATE TABLE IF NOT EXISTS order_acceptances (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                         CREATE TABLE IF NOT EXISTS order_acceptances
+                         (
+                             id
+                             INTEGER
+                             PRIMARY
+                             KEY
+                             AUTOINCREMENT,
 
-                order_id INTEGER NOT NULL,
-                offerer_id INTEGER NOT NULL,
-                offerer_tel_id INTEGER NOT NULL,
+                             order_id
+                             INTEGER
+                             NOT
+                             NULL,
+                             offerer_id
+                             INTEGER
+                             NOT
+                             NULL,
+                             offerer_tel_id
+                             INTEGER
+                             NOT
+                             NULL,
 
-                acceptor_id INTEGER NOT NULL,
-                acceptor_tel_id INTEGER NOT NULL,
+                             acceptor_id
+                             INTEGER
+                             NOT
+                             NULL,
+                             acceptor_tel_id
+                             INTEGER
+                             NOT
+                             NULL,
 
-                accepted_volume INTEGER NOT NULL,
-                accepted_at INTEGER,
+                             accepted_volume
+                             INTEGER
+                             NOT
+                             NULL,
+                             accepted_at
+                             INTEGER,
 
-                FOREIGN KEY (order_id) REFERENCES orders(id),
-                FOREIGN KEY (offerer_id) REFERENCES users(id),
-                FOREIGN KEY (acceptor_id) REFERENCES users(id)
-            );
-        """)
+                             FOREIGN
+                             KEY
+                         (
+                             order_id
+                         ) REFERENCES orders
+                         (
+                             id
+                         ),
+                             FOREIGN KEY
+                         (
+                             offerer_id
+                         ) REFERENCES users
+                         (
+                             id
+                         ),
+                             FOREIGN KEY
+                         (
+                             acceptor_id
+                         ) REFERENCES users
+                         (
+                             id
+                         )
+                             );
+                         """)
 
         await db.execute("""
-            CREATE TABLE IF NOT EXISTS config (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                value TEXT NOT NULL,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+                         CREATE TABLE IF NOT EXISTS config
+                         (
+                             id
+                             INTEGER
+                             PRIMARY
+                             KEY
+                             AUTOINCREMENT,
+                             name
+                             TEXT
+                             NOT
+                             NULL,
+                             value
+                             TEXT
+                             NOT
+                             NULL,
+                             created_at
+                             TEXT
+                             DEFAULT
+                             CURRENT_TIMESTAMP
+                         )
+                         """)
         await db.commit()
         logging.info("✅ data base and tables created")
 
@@ -175,9 +320,9 @@ async def get_users_by_status(*statuses: int):
     """دریافت لیست کاربران"""
 
     query = """
-        SELECT id, tel_id, name, created_at, status
-        FROM users
-    """
+            SELECT id, tel_id, name, created_at, status
+            FROM users \
+            """
 
     params = ()
 
@@ -282,42 +427,41 @@ async def create_order(
         expires_at = created_at + 60
 
         await db.execute("""
-            INSERT INTO orders (
-                offerer_id,
-                offerer_tel_id,
-                price,
-                order_type,
-                total_volume,
-                remaining_volume,
-                payment_type,
-                date_type,
-                trade_date,
-                description,
-                expires_at,
-                group_chat_id,
-                group_message_id,
-                group_text,
-                created_at,
-                status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            offerer_id,
-            offerer_tel_id,
-            price,
-            order_type,
-            total_volume,
-            total_volume,  # remaining_volume
-            payment_type,
-            date_type,
-            trade_date,
-            description,
-            expires_at,
-            group_chat_id,
-            group_message_id,
-            group_text,
-            created_at,
-            status
-        ))
+                         INSERT INTO orders (offerer_id,
+                                             offerer_tel_id,
+                                             price,
+                                             order_type,
+                                             total_volume,
+                                             remaining_volume,
+                                             payment_type,
+                                             date_type,
+                                             trade_date,
+                                             description,
+                                             expires_at,
+                                             group_chat_id,
+                                             group_message_id,
+                                             group_text,
+                                             created_at,
+                                             status)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         """, (
+                             offerer_id,
+                             offerer_tel_id,
+                             price,
+                             order_type,
+                             total_volume,
+                             total_volume,  # remaining_volume
+                             payment_type,
+                             date_type,
+                             trade_date,
+                             description,
+                             expires_at,
+                             group_chat_id,
+                             group_message_id,
+                             group_text,
+                             created_at,
+                             status
+                         ))
         await db.commit()
 
         async with db.execute("SELECT last_insert_rowid()") as cursor:
@@ -340,11 +484,12 @@ async def cancel_last_user_order(offerer_id: int):
     async with aiosqlite.connect(DB_NAME) as db:
         # اول همه سفارشات فعال کاربر را می‌گیریم
         async with db.execute("""
-            SELECT * FROM orders 
-            WHERE offerer_id = ? 
-              AND status = 'active'
-            ORDER BY created_at DESC
-        """, (offerer_id,)) as cursor:
+                              SELECT *
+                              FROM orders
+                              WHERE offerer_id = ?
+                                AND status = 'active'
+                              ORDER BY created_at DESC
+                              """, (offerer_id,)) as cursor:
 
             rows = await cursor.fetchall()
             if not rows:
@@ -367,15 +512,55 @@ async def cancel_last_user_order(offerer_id: int):
     return canceled_orders
 
 
+async def cancel_last_user_order_by_type(order_type: str, offerer_id: int):
+    canceled_orders = []
+
+    async with aiosqlite.connect(DB_NAME) as db:
+        # اول همه سفارشات فعال کاربر را می‌گیریم
+        async with db.execute("""
+                              SELECT *
+                              FROM orders
+                              WHERE offerer_id = ?
+                                AND order_type = ?
+                                AND status = 'active'
+                              ORDER BY created_at DESC
+                              """, (offerer_id, order_type)) as cursor:
+
+            rows = await cursor.fetchall()
+            if not rows:
+                return []  # هیچ سفارشی برای کنسل کردن وجود ندارد
+
+            columns = [col[0] for col in cursor.description]
+
+            # تبدیل رکوردها به دیکشنری
+            for row in rows:
+                order_dict = dict(zip(columns, row))
+                canceled_orders.append(order_dict)
+
+        await db.execute(
+            "UPDATE orders SET status = 'cancelled' WHERE offerer_id = ? AND order_type = ? AND status = 'active'",
+            (offerer_id, order_type)
+        )
+
+        await db.commit()
+
+    return canceled_orders
+
+
 async def get_last_order():
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("""
-            SELECT id, offerer_id, price, total_volume, order_type, 
-                status, created_at, expires_at
-            FROM orders 
-            ORDER BY created_at DESC 
-            LIMIT 1
-        """) as cursor:
+                              SELECT id,
+                                     offerer_id,
+                                     price,
+                                     total_volume,
+                                     order_type,
+                                     status,
+                                     created_at,
+                                     expires_at
+                              FROM orders
+                              ORDER BY created_at DESC LIMIT 1
+                              """) as cursor:
             row = await cursor.fetchone()
             if row:
                 return dict(zip([c[0] for c in cursor.description], row))
@@ -387,12 +572,13 @@ async def get_last_order_by(
 ):
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("""
-            SELECT *
-            FROM orders
-            WHERE order_type = ? AND payment_type = ? AND date_type = ?
-            ORDER BY created_at DESC 
-            LIMIT 1
-        """, (order_type, payment_type, date_type)) as cursor:
+                              SELECT *
+                              FROM orders
+                              WHERE order_type = ?
+                                AND payment_type = ?
+                                AND date_type = ?
+                              ORDER BY created_at DESC LIMIT 1
+                              """, (order_type, payment_type, date_type)) as cursor:
             row = await cursor.fetchone()
             if row:
                 return dict(zip([c[0] for c in cursor.description], row))
@@ -404,12 +590,12 @@ async def get_same_order_type(
 ):
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("""
-            SELECT *
-            FROM orders
-            WHERE payment_type = ? AND date_type = ?
-            ORDER BY created_at DESC 
-            LIMIT 1
-        """, (payment_type, date_type)) as cursor:
+                              SELECT *
+                              FROM orders
+                              WHERE payment_type = ?
+                                AND date_type = ?
+                              ORDER BY created_at DESC LIMIT 1
+                              """, (payment_type, date_type)) as cursor:
             row = await cursor.fetchone()
             if row:
                 return dict(zip([c[0] for c in cursor.description], row))
@@ -432,12 +618,12 @@ async def update_order_group_info(order_id: int, group_message_id: int, group_ch
 async def get_expired_orders(timestamp):
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("""
-            SELECT id, group_chat_id, group_message_id, group_text 
-            FROM orders 
-            WHERE status = 'active' 
-              AND expires_at IS NOT NULL 
-              AND expires_at < ? 
-        """, (timestamp,)) as cursor:
+                              SELECT id, group_chat_id, group_message_id, group_text
+                              FROM orders
+                              WHERE status = 'active'
+                                AND expires_at IS NOT NULL
+                                AND expires_at < ?
+                              """, (timestamp,)) as cursor:
             rows = await cursor.fetchall()
             columns = [col[0] for col in cursor.description]
             return [dict(zip(columns, row)) for row in rows]
@@ -468,22 +654,24 @@ async def create_order_acceptance(
         async with db.execute("BEGIN"):
             # ایجاد رکورد پذیرش
             cursor = await db.execute("""
-                INSERT INTO order_acceptances 
-                (order_id, offerer_id, offerer_tel_id, acceptor_id, acceptor_tel_id, accepted_volume, accepted_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (order_id, offerer_id, offerer_tel_id, acceptor_id, acceptor_tel_id, volume, accepted_at))
+                                      INSERT INTO order_acceptances
+                                      (order_id, offerer_id, offerer_tel_id, acceptor_id, acceptor_tel_id,
+                                       accepted_volume, accepted_at)
+                                      VALUES (?, ?, ?, ?, ?, ?, ?)
+                                      """, (order_id, offerer_id, offerer_tel_id, acceptor_id, acceptor_tel_id, volume,
+                                            accepted_at))
 
             acceptance_id = cursor.lastrowid
             # به‌روزرسانی remaining_volume
             await db.execute("""
-                UPDATE orders 
-                SET remaining_volume = remaining_volume - ?,
-                    status = CASE 
-                        WHEN remaining_volume - ? <= 0 THEN 'fully_accepted' 
-                        ELSE status 
-                    END
-                WHERE id = ?
-            """, (volume, volume, order_id))
+                             UPDATE orders
+                             SET remaining_volume = remaining_volume - ?,
+                                 status           = CASE
+                                                        WHEN remaining_volume - ? <= 0 THEN 'fully_accepted'
+                                                        ELSE status
+                                     END
+                             WHERE id = ?
+                             """, (volume, volume, order_id))
 
             await db.commit()
 
@@ -498,11 +686,11 @@ async def get_user_today_volume(user_id: int):
 
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("""
-            SELECT COALESCE(SUM(accepted_volume), 0) as today_volume
-            FROM order_acceptances 
-            WHERE accepted_at BETWEEN ? AND ?
-            AND (offerer_id = ? OR acceptor_id = ?)
-        """, (toda[0], toda[1], user_id, user_id)) as cursor:
+                              SELECT COALESCE(SUM(accepted_volume), 0) as today_volume
+                              FROM order_acceptances
+                              WHERE accepted_at BETWEEN ? AND ?
+                                AND (offerer_id = ? OR acceptor_id = ?)
+                              """, (toda[0], toda[1], user_id, user_id)) as cursor:
             result = await cursor.fetchone()
             return result[0] if result else 0
 
@@ -515,25 +703,24 @@ async def get_user_today_trades(user_id: int, start_ts: int, end_ts: int):
         await db.execute("PRAGMA foreign_keys = ON")
 
         async with db.execute("""
-            SELECT 
-                oa.id,
-                oa.order_id,
-                o.order_type,           -- خرید یا فروش 
-                o.payment_type,
-                o.date_type,
-                o.group_text,
-                o.price,
-                oa.accepted_volume,
-                oa.accepted_at,
-                o.description,
-                oa.offerer_id,
-                oa.acceptor_id
-            FROM order_acceptances oa
-            JOIN orders o ON oa.order_id = o.id
-            WHERE oa.accepted_at BETWEEN ? AND ?
-              AND (oa.offerer_id = ? OR oa.acceptor_id = ?)
-            ORDER BY oa.accepted_at DESC
-        """, (start_ts, end_ts, user_id, user_id)) as cursor:
+                              SELECT oa.id,
+                                     oa.order_id,
+                                     o.order_type, -- خرید یا فروش 
+                                     o.payment_type,
+                                     o.date_type,
+                                     o.group_text,
+                                     o.price,
+                                     oa.accepted_volume,
+                                     oa.accepted_at,
+                                     o.description,
+                                     oa.offerer_id,
+                                     oa.acceptor_id
+                              FROM order_acceptances oa
+                                       JOIN orders o ON oa.order_id = o.id
+                              WHERE oa.accepted_at BETWEEN ? AND ?
+                                AND (oa.offerer_id = ? OR oa.acceptor_id = ?)
+                              ORDER BY oa.accepted_at DESC
+                              """, (start_ts, end_ts, user_id, user_id)) as cursor:
             rows = await cursor.fetchall()
             columns = [col[0] for col in cursor.description]
             return [dict(zip(columns, row)) for row in rows]
@@ -548,35 +735,34 @@ async def get_for_admin_trades(start_ts: int, end_ts: int):
         await db.execute("PRAGMA foreign_keys = ON")
 
         async with db.execute("""
-            SELECT
-                oa.id AS acceptance_id,
-                oa.order_id,
-                o.order_type,           -- خرید یا فروش
-                o.payment_type,
-                o.date_type,
-                o.group_text,
-                o.price,
-                oa.accepted_volume,
-                oa.accepted_at,
-                o.description,
-                oa.offerer_id,
-                oa.acceptor_id,
-                
-                -- اطلاعات لفظ دهنده (Offerer)
-                offerer.name AS offerer_name,
-                
-                -- اطلاعات لفظ گیرنده (Acceptor)
-                acceptor.name AS acceptor_name
-                
-            FROM order_acceptances oa
-            JOIN orders o ON oa.order_id = o.id
-            
-            JOIN users offerer ON oa.offerer_id = offerer.id
-            JOIN users acceptor ON oa.acceptor_id = acceptor.id
-            
-            WHERE oa.accepted_at BETWEEN ? AND ?
-            ORDER BY oa.accepted_at DESC
-            """, (start_ts, end_ts)) as cursor:
+                              SELECT oa.id         AS acceptance_id,
+                                     oa.order_id,
+                                     o.order_type, -- خرید یا فروش
+                                     o.payment_type,
+                                     o.date_type,
+                                     o.group_text,
+                                     o.price,
+                                     oa.accepted_volume,
+                                     oa.accepted_at,
+                                     o.description,
+                                     oa.offerer_id,
+                                     oa.acceptor_id,
+
+                                     -- اطلاعات لفظ دهنده (Offerer)
+                                     offerer.name  AS offerer_name,
+
+                                     -- اطلاعات لفظ گیرنده (Acceptor)
+                                     acceptor.name AS acceptor_name
+
+                              FROM order_acceptances oa
+                                       JOIN orders o ON oa.order_id = o.id
+
+                                       JOIN users offerer ON oa.offerer_id = offerer.id
+                                       JOIN users acceptor ON oa.acceptor_id = acceptor.id
+
+                              WHERE oa.accepted_at BETWEEN ? AND ?
+                              ORDER BY oa.accepted_at DESC
+                              """, (start_ts, end_ts)) as cursor:
             rows = await cursor.fetchall()
             columns = [col[0] for col in cursor.description]
             return [dict(zip(columns, row)) for row in rows]
