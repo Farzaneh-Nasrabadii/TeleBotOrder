@@ -1,5 +1,4 @@
 
-````markdown
 # TeleBotOrder
 
 A Telegram-based order management system built with **Python** and **Aiogram 3**.
