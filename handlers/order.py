@@ -29,7 +29,8 @@ from database import (
     is_holiday,
     get_config_by_name,
     get_last_order_by,
-    get_same_order_type
+    get_same_order_type,
+    cancel_last_user_order_by_type
 )
 from keyboards.inline import get_confirmation_keyboard, get_order_keyboard
 from keyboards.reply import get_order_cancel_menu, get_user_main_menu
@@ -167,28 +168,30 @@ async def process_confirmation(callback: CallbackQuery, state: FSMContext):
         canceled_orders = None
         if not is_admin(callback.from_user.id):
             canceled_orders = await cancel_last_user_order(offerer_id=int(data["user_id"]))
+        else:
+            canceled_orders = await cancel_last_user_order_by_type(order_type=parsed["order_type"],offerer_id=int(data["user_id"]))
 
         # لوپ برای ویرایش پیام‌های قبلی در گروه
-        if canceled_orders:
-            for order in canceled_orders:
-                if order.get("group_message_id") and order.get("group_chat_id"):
-                    try:
-
-                        if order['description']:
-                            order["group_text"] += f"{order['description']}"
-
-                        await callback.bot.edit_message_text(
-                            chat_id=order["group_chat_id"],
-                            message_id=order["group_message_id"],
-                            text=order["group_text"] +
-                            "\n❌",
-                            parse_mode="HTML"
-                        )
-                    except Exception as e:
-                        logging.error(f"خطا در ویرایش پیام گروه: {e}")
+        # if canceled_orders:
+        #     for order in canceled_orders:
+        #         if order.get("group_message_id") and order.get("group_chat_id"):
+        #             try:
+        #
+        #                 if order['description']:
+        #                     order["group_text"] += f"{order['description']}"
+        #
+        #                 await callback.bot.edit_message_text(
+        #                     chat_id=order["group_chat_id"],
+        #                     message_id=order["group_message_id"],
+        #                     text=order["group_text"] +
+        #                     "\n❌",
+        #                     parse_mode="HTML"
+        #                 )
+        #             except Exception as e:
+        #                 logging.error(f"خطا در ویرایش پیام گروه: {e}")
 
         # ساخت متن برای گروه
-        group_text = f"""{format(int(parsed['price']), ",")} {"🔴" if parsed['order_type'] == "فروش" else "🔵"} {parsed['order_type']} {parsed["order"]} 💵 {parsed['volume']} تا"""
+        group_text = f"""{format(int(parsed['price']), ",")} {"🔴" if parsed['order_type'] == "فروش" else "🔵"} {parsed['order_type']} {parsed["order"]} {parsed['volume']} تا"""
 
         # ==================== ثبت سفارش جدید ====================
         order_id = await create_order(
@@ -369,9 +372,9 @@ async def handle_order_message(message: Message, state: FSMContext):
         )
         return
 
-    differentTypeLastOrder = await get_last_order_by(
-        "خرید" if parsed['order_type'] == "فروش" else "فروش",parsed['payment_type'],parsed['trade_date']
-    )
+    # differentTypeLastOrder = await get_last_order_by(
+    #     "خرید" if parsed['order_type'] == "فروش" else "فروش",parsed['payment_type'],parsed['trade_date']
+    # )
     sameTypeLastOrder = await get_last_order_by(parsed['order_type'],parsed['payment_type'],parsed['trade_date']) or {"price": 50000000, "expires_at":0}
 
     same_order_type = await get_same_order_type(parsed['payment_type'],parsed['trade_date']) or {"price": 50000000, "expires_at":0}
@@ -381,13 +384,13 @@ async def handle_order_message(message: Message, state: FSMContext):
         2:1000000,
         1:500000
     }
-    
+
     if (len(parsed['price']) == 6):
-        
+
         lastPrince = int(same_order_type["price"])
         chengedLastPrice = str(lastPrince) #"79850000"
 
-        
+
         prefix = int(chengedLastPrice[:-6])   # 79
         digit = int(chengedLastPrice[-6])     # 8
         suffix = chengedLastPrice[-6:]        # 850000
@@ -403,27 +406,27 @@ async def handle_order_message(message: Message, state: FSMContext):
         # else:
         #     chengedLastPrice[1] = str(int(str(lastPrince)[2]) - 1)
         # chengedLastPrice = "".join(chengedLastPrice)
-        
+
         onLastPriceDifferent = abs( lastPrince - int(str(lastPrince)[:-6] + (parsed['price'])))
-        
+
         onChengedLastPriceDifferent = abs( lastPrince - int(chengedLastPrice[:-6] + parsed['price']))
-        
+
         if(onLastPriceDifferent <= onChengedLastPriceDifferent):
             parsed['price'] = int(str(lastPrince)[:-6] + (parsed['price']))
         else:
             parsed['price'] = int(chengedLastPrice[:-6] + parsed['price'])
-            
+
     # else:
     #     parsed['price'] = int(parsed['price'])*1000
     if (not is_admin(message.from_user.id)):
 
-        if(differentTypeLastOrder):
-                
-            if(abs(int(parsed['price']) - int(differentTypeLastOrder["price"])) > price_limit[parsed['payment_type']]):
+        if(same_order_type):
+
+            if(abs(int(parsed['price']) - int(same_order_type["price"])) > price_limit[parsed['payment_type']]):
                 await message.answer(
                     f"⚠️ تفاوت قیمت لفظ شما با آخرین لفظ مشابه نباید بیشتر یا کمتر از {int(price_limit[parsed['payment_type']]/1000)} خط باشد.\n"+
                     f"بازه قیمت:\n"+
-                    f"{format(int(differentTypeLastOrder["price"]+price_limit[parsed['payment_type']]), ",")} الی {format(int(differentTypeLastOrder["price"]-price_limit[parsed['payment_type']]), ",")}\n"
+                    f"{format(int(same_order_type["price"]+price_limit[parsed['payment_type']]), ",")} الی {format(int(same_order_type["price"]-price_limit[parsed['payment_type']]), ",")}\n"
                 )
                 return
 
@@ -433,19 +436,19 @@ async def handle_order_message(message: Message, state: FSMContext):
                     f"⚠️ در حال حاضر لفظ مشابه فعالی با قیمت کمتر از این لفظ وجود دارد."
                 )
                 return
-            
-        elif (parsed["order_type"] == "خرید"): 
-                            
+
+        elif (parsed["order_type"] == "خرید"):
+
             if (int(sameTypeLastOrder["expires_at"]) > timestamp and int(parsed['price']) < int(sameTypeLastOrder["price"])):
                 await message.answer(
                     f"⚠️ در حال حاضر لفظ مشابه فعالی با قیمت بیشتری از این لفظ وجود دارد."
                 )
                 return
 
-    order_text = f"""{format(int(parsed['price']), ",")} {"🔴" if parsed['order_type'] == "فروش" else "🔵"} {parsed['order_type']} {parsed["order"]} 💵 {parsed['volume']} تا"""
+    order_text = f"""{format(int(parsed['price']), ",")} {"🔴" if parsed['order_type'] == "فروش" else "🔵"} {parsed['order_type']} {parsed["order"]} {parsed['volume']} تا"""
     if parsed['description']:
         order_text += f"{parsed['description']}"
-    
+
     uniCode = str(datetime.datetime.now(datetime.timezone.utc).timestamp())[4:]
     # ذخیره اطلاعات در FSM
     await state.update_data(
@@ -486,15 +489,16 @@ async def show_pending_users(message: Message):
 
             if order.get("group_message_id") and order.get("group_chat_id"):
                 try:
-                    if order['description']:
-                        order["group_text"] += f"{order['description']}"
-                    await message.bot.edit_message_text(
-                        chat_id=order["group_chat_id"],
-                        message_id=order["group_message_id"],
-                        text=order["group_text"] +
-                        "\n❌",
-                        parse_mode="HTML"
-                    )
+                    # if order['description']:
+                    #     order["group_text"] += f"{order['description']}"
+                    # await message.bot.edit_message_text(
+                    #     chat_id=order["group_chat_id"],
+                    #     message_id=order["group_message_id"],
+                    #     text=order["group_text"] +
+                    #     "\n❌",
+                    #     parse_mode="HTML"
+                    # )
+
                     # await message.answer(
                     #     text=order["group_text"] +
                     #     "\n\n❌",
@@ -593,7 +597,7 @@ async def handle_accept_order(callback: CallbackQuery, bot: Bot):
         return
 
     # ======================== reject if expired ========================
-    if order['status'] == "expired":
+    if order['status'] != "active":
         await callback.answer("این لفظ منقضی شد!", show_alert=True)
         return
 
@@ -638,8 +642,7 @@ async def handle_accept_order(callback: CallbackQuery, bot: Bot):
     # کیبورد جدید
     new_keyboard = get_order_keyboard(order_id, new_remaining)
 
-    if new_remaining == 0:
-        order['group_text'] += f" 🤝🏻✅"
+    order['group_text'] += f"(مانده:{new_remaining}) 🤝🏻✅"
 
     try:
         if order['description']:
@@ -653,23 +656,30 @@ async def handle_accept_order(callback: CallbackQuery, bot: Bot):
     except Exception as e:
         logging.error(f"ویرایش پیام گروه شکست: {e}")
 
+    orders_emoji = {
+        "1-1": "☀️",
+        "1-2": "",
+        "2-1": "⏳",
+        "2-2": "💵",
+    }
+    emoji = orders_emoji.get(f'{order['date_type']}-{order['payment_type']}')
     group_text = data_to_order(order['date_type'], order['payment_type'])
     try:
-        fferer_order_text = f"{"🔴" if order['order_type'] == "فروش" else "🔵"} {order['order_type']}\n" +"🤝🏻 معامله\n" +f"فی: {format(int(order["price"]), ",")}\n" +f"مقدار: {volume} کیلو\n" +f"برای: {order["trade_date"]}\n" +f"شناسه: {order_acceptance_id}\n" +f"زمان معامله: \n{tehran_date_and_time}\n\nجزئیات سفارش:\n({group_text})\n"
+        fferer_order_text = f"{order['order_type']} {"🔴" if order['order_type'] == "فروش" else "🔵"}{emoji}\n" +"🤝🏻 معامله\n" +f"فی: {format(int(order["price"]), ",")}\n" +f"مقدار: {volume} کیلو\n" +f"برای: {order["trade_date"]}\n" +f"شناسه: {order_acceptance_id}\n" +f"زمان معامله: \n{tehran_date_and_time}\n\nجزئیات سفارش:\n({group_text})\n"
         # f"({order['group_text'][9:-7]})\n" +
         if order['description']:
             fferer_order_text += f"{order['description']}"
-            
+
         await bot.send_message(
             chat_id=order['offerer_tel_id'],
             text=fferer_order_text
         )
-        
-        acceptor_order_text = f"{"🔵" if order['order_type'] == "فروش" else "🔴"} {"خرید" if order['order_type'] == "فروش" else "فروش"}\n" +"🤝🏻 معامله\n" +f"فی: {format(int(order["price"]), ",")}\n" +f"مقدار: {volume} کیلو\n" +f"برای: {order["trade_date"]}\n" +f"شناسه: {order_acceptance_id}\n" +f"زمان معامله: \n{tehran_date_and_time}\n\nجزئیات سفارش:\n({group_text})\n"
+
+        acceptor_order_text = f"{"خرید" if order['order_type'] == "فروش" else "فروش"} {"🔵" if order['order_type'] == "فروش" else "🔴"}{emoji}\n" +"🤝🏻 معامله\n" +f"فی: {format(int(order["price"]), ",")}\n" +f"مقدار: {volume} کیلو\n" +f"برای: {order["trade_date"]}\n" +f"شناسه: {order_acceptance_id}\n" +f"زمان معامله: \n{tehran_date_and_time}\n\nجزئیات سفارش:\n({group_text})\n"
         # f"({order['group_text'][9:-7]})\n" +
         if order['description']:
             acceptor_order_text += f"{order['description']}"
-        
+
         await bot.send_message(
             chat_id=callback.from_user.id,
             text=acceptor_order_text
